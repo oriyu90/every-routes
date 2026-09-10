@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "routineAddress": "rt_1a774b892a7cb4961f8c75d940fb324aeb9dc0123456789abcdef0123456789b",
+  "name": "休日",
+  "lastModified": "2026-09-08T22:03:10Z",
+  "recurrence": {
+    "daysOfWeek": ["SAT", "SUN"],
+    "holiday": "include"
+  },
+  "blocks": [
+    { "id": "blk_1", "start": "09:00", "end": "10:00", "title": "遅めの起床", "note": "" },
+    { "id": "blk_2", "start": "13:00", "end": "14:00", "title": "買い物", "note": "" }
+  ]
+}

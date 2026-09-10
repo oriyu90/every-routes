@@ -1,0 +1,27 @@
+# Every routes server configuration (copy to every-routes.yaml and edit).
+
+bind: 0.0.0.0          # LAN / VPN interface to bind
+port: 8787             # TCP port (default)
+data_dir: ./data       # SQLite file + logs location. Back up by copying this dir.
+timezone: Asia/Tokyo   # Server default timezone (IANA name) for date-range queries.
+holiday_region: JP     # Holiday calendar region used by clients (informational).
+
+# Shared secrets. Any of these may be sent as `Authorization: Bearer <token>`.
+# Use a different token per device / agent if you prefer. NEVER log these values.
+auth_tokens:
+  - "change-me-please"
+
+# Optional TLS (self-signed is allowed; the Android client can trust it explicitly).
+tls:
+  cert_file: null      # e.g. ./certs/cert.pem
+  key_file: null       # e.g. ./certs/key.pem
+
+# Only needed if an external browser-based app calls the API from a different origin.
+cors_allow_origins: []
+
+# Security / safety guards (design 01 §3).
+max_request_body_bytes: 1048576   # 1 MiB per request.
+rate_limit_per_minute: 300        # Per-client requests/minute (429 when exceeded).
+
+# Maintenance.
+tombstone_gc_days: 90             # Physically purge tombstones older than this.

@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RoutineProfile",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "routineAddress": { "type": "string", "pattern": "^rt_[0-9a-fA-F]{64}$" },
+    "name": { "type": "string" },
+    "lastModified": { "type": "string", "format": "date-time" },
+    "recurrence": {
+      "type": "object",
+      "properties": {
+        "daysOfWeek": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+          }
+        },
+        "holiday": {
+          "type": "string",
+          "enum": ["exclude", "include", "only"]
+        }
+      },
+      "required": ["daysOfWeek", "holiday"]
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "start": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "end": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+          "title": { "type": "string" },
+          "note": { "type": "string" }
+        },
+        "required": ["id", "start", "end", "title"]
+      }
+    }
+  },
+  "required": ["schemaVersion", "routineAddress", "name", "lastModified", "recurrence", "blocks"]
+}

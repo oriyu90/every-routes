@@ -1,0 +1,26 @@
+name: server
+
+on:
+  push:
+    branches: [main]
+    paths: ["server/**", "spec/**", ".github/workflows/server-ci.yml"]
+  pull_request:
+    paths: ["server/**", "spec/**", ".github/workflows/server-ci.yml"]
+
+jobs:
+  server-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Lint server with ruff
+        run: uvx --from "ruff==0.12.*" ruff check .
+
+      - name: Run tests with uv
+        run: uv run --with ".[dev]" -- python -m pytest -q

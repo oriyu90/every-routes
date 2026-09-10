@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "id": { "type": "string" },
+    "source": { "type": "string", "enum": ["google_tasks", "agent", "manual"] },
+    "externalId": { "type": ["string", "null"] },
+    "title": { "type": "string" },
+    "at": { "type": "string", "format": "date-time" },
+    "allDay": { "type": "boolean" },
+    "status": { "type": "string", "enum": ["needsAction", "completed"] },
+    "lastModified": { "type": "string", "format": "date-time" },
+    "deleted": { "type": "boolean" }
+  },
+  "required": ["schemaVersion", "id", "source", "title", "at", "allDay", "status", "lastModified", "deleted"]
+}

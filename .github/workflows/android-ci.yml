@@ -1,0 +1,31 @@
+name: android
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", "spec/**", ".github/workflows/android-ci.yml"]
+  pull_request:
+    paths: ["android/**", "spec/**", ".github/workflows/android-ci.yml"]
+
+jobs:
+  android-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build debug APK and run unit tests
+        run: ./gradlew assembleDebug testDebugUnitTest lint

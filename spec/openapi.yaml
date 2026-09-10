@@ -1,0 +1,407 @@
+openapi: 3.0.0
+info:
+  title: Every routes API
+  version: 1.0.0
+  description: API for managing and syncing routine profiles and tasks.
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      summary: Health Check
+      responses:
+        '200':
+          description: Server is active
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /info:
+    get:
+      summary: Server Information
+      responses:
+        '200':
+          description: General server info and configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timezone:
+                    type: string
+                    example: Asia/Tokyo
+                  holidayRegion:
+                    type: string
+                    example: JP
+                  schemaVersions:
+                    type: object
+                    properties:
+                      routine:
+                        type: integer
+                        example: 1
+                      task:
+                        type: integer
+                        example: 1
+                  serverTime:
+                    type: string
+                    format: date-time
+                    example: "2026-09-10T08:12:33Z"
+  /routines:
+    get:
+      summary: Get list of routine profiles
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Return routines modified since this timestamp (UTC)
+        - name: includeDeleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Return logically deleted routines as well
+      responses:
+        '200':
+          description: List of routine profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        routineAddress:
+                          type: string
+                        name:
+                          type: string
+                        lastModified:
+                          type: string
+                          format: date-time
+                        schemaVersion:
+                          type: integer
+                        deleted:
+                          type: boolean
+  /routines/{routineAddress}:
+    get:
+      summary: Retrieve a single routine profile
+      parameters:
+        - name: routineAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed routine profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineProfile'
+        '404':
+          description: Not Found
+    put:
+      summary: Upload/Update a routine profile
+      parameters:
+        - name: routineAddress
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Overwrite even if the client's version is older than server's
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoutineProfile'
+      responses:
+        '200':
+          description: Routine successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineProfile'
+        '201':
+          description: Routine successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineProfile'
+        '400':
+          description: Address mismatch or invalid payload
+        '409':
+          description: Conflict (server contains newer version). Returns current server data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineProfile'
+    delete:
+      summary: Logically delete a routine profile
+      parameters:
+        - name: routineAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Routine logically deleted
+        '404':
+          description: Not Found
+  /tasks:
+    get:
+      summary: Retrieve task list within date range
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD), default is today
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: End date (YYYY-MM-DD), default is today + 14 days
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter by lastModified timestamp (UTC)
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [google_tasks, agent, manual]
+        - name: includeDeleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Include logically deleted tasks (recommended for delta sync)
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+    post:
+      summary: Create a new task (typically agent/manual)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Optional client-generated ID
+                source:
+                  type: string
+                  enum: [google_tasks, agent, manual]
+                externalId:
+                  type: string
+                  nullable: true
+                title:
+                  type: string
+                at:
+                  type: string
+                  format: date-time
+                allDay:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [needsAction, completed]
+              required: [source, title, at]
+      responses:
+        '201':
+          description: Task successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '200':
+          description: Task matched existing external ID and was updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+  /tasks/{id}:
+    patch:
+      summary: Partially update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                at:
+                  type: string
+                  format: date-time
+                allDay:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [needsAction, completed]
+                lastModified:
+                  type: string
+                  format: date-time
+                  description: Client's known lastModified to check conflicts
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+        '409':
+          description: Conflict (server is newer). Returns server version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+    delete:
+      summary: Logically delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task logically deleted
+        '404':
+          description: Not Found
+
+components:
+  schemas:
+    RoutineProfile:
+      type: object
+      properties:
+        schemaVersion:
+          type: integer
+          example: 1
+        routineAddress:
+          type: string
+          example: "rt_9f2c4b892a7cb4961f8c75d940fb324aeb9dc0123456789abcdef0123456789a"
+        name:
+          type: string
+          example: "平日"
+        lastModified:
+          type: string
+          format: date-time
+          example: "2026-09-10T08:12:33Z"
+        recurrence:
+          type: object
+          properties:
+            daysOfWeek:
+              type: array
+              items:
+                type: string
+                enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
+            holiday:
+              type: string
+              enum: [exclude, include, only]
+          required: [daysOfWeek, holiday]
+        blocks:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              start:
+                type: string
+                pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+              end:
+                type: string
+                pattern: "^([01]\\d|2[0-3]):[0-5]\\d$"
+              title:
+                type: string
+              note:
+                type: string
+            required: [id, start, end, title]
+      required: [schemaVersion, routineAddress, name, lastModified, recurrence, blocks]
+
+    Task:
+      type: object
+      properties:
+        schemaVersion:
+          type: integer
+          example: 1
+        id:
+          type: string
+          example: "tsk_3a91b892a7cb4961f8c75d940fb324aeb9dc0123456789abcdef0123456789a"
+        source:
+          type: string
+          enum: [google_tasks, agent, manual]
+          example: "agent"
+        externalId:
+          type: string
+          nullable: true
+          example: null
+        title:
+          type: string
+          example: "資料作成"
+        at:
+          type: string
+          format: date-time
+          example: "2026-09-11T15:00:00+09:00"
+        allDay:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [needsAction, completed]
+          example: "needsAction"
+        lastModified:
+          type: string
+          format: date-time
+          example: "2026-09-10T09:00:00Z"
+        deleted:
+          type: boolean
+          example: false
+      required: [schemaVersion, id, source, title, at, allDay, status, lastModified, deleted]

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Every routes</string>
+    <string name="today_title">今日ビュー</string>
+    <string name="empty_today">今日の予定はありません</string>
+</resources>

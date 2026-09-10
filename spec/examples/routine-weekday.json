@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "routineAddress": "rt_9f2c4b892a7cb4961f8c75d940fb324aeb9dc0123456789abcdef0123456789a",
+  "name": "平日",
+  "lastModified": "2026-09-10T08:12:33Z",
+  "recurrence": {
+    "daysOfWeek": ["MON", "TUE", "WED", "THU", "FRI"],
+    "holiday": "exclude"
+  },
+  "blocks": [
+    { "id": "blk_1", "start": "07:00", "end": "07:30", "title": "起床・準備", "note": "" },
+    { "id": "blk_2", "start": "09:00", "end": "09:30", "title": "通勤",       "note": "" },
+    { "id": "blk_3", "start": "12:00", "end": "13:00", "title": "昼食",       "note": "" }
+  ]
+}

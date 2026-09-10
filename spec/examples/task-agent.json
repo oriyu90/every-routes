@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "tsk_3a91b892a7cb4961f8c75d940fb324aeb9dc0123456789abcdef0123456789a",
+  "source": "agent",
+  "externalId": null,
+  "title": "資料作成",
+  "at": "2026-09-11T15:00:00+09:00",
+  "allDay": false,
+  "status": "needsAction",
+  "lastModified": "2026-09-10T09:00:00Z",
+  "deleted": false
+}

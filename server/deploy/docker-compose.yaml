@@ -1,0 +1,9 @@
+services:
+  every-routes:
+    build: ..
+    ports: ["8787:8787"]
+    volumes:
+      - ./data:/data
+      - ./every-routes.yaml:/app/every-routes.yaml:ro
+    command: ["every-routes-server", "--config", "/app/every-routes.yaml"]
+    restart: unless-stopped

@@ -1,0 +1,10 @@
+[Unit]
+Description=Every routes server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/every-routes-server --config /etc/every-routes/every-routes.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
