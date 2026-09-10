@@ -28,6 +28,12 @@ cd server && pip install -e ".[dev]" && python -m pytest
 cd ../android && ./gradlew assembleDebug testDebugUnitTest lint
 ```
 
+## リリース・紹介サイト
+
+- 紹介サイト: https://studio-rizi.pages.dev/projects/every-routes/（日本語・English・中文・Português）
+- サーバー `server-v0.1.0`: https://github.com/oriyu90/every-routes/releases/tag/server-v0.1.0（sdist + wheel）
+- Android `android-v0.1.0`: https://github.com/oriyu90/every-routes/releases/tag/android-v0.1.0（署名済み APK）
+
 ## 著者 (Author)
 `Yuki_Orita`
 
