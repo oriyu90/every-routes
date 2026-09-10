@@ -3,4 +3,95 @@
     <string name="app_name">Every routes</string>
     <string name="today_title">Today</string>
     <string name="empty_today">No plans for today</string>
+    <string name="tab_today">Today</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="server_section">Server connection</string>
+    <string name="server_url_label">Base URL</string>
+    <string name="server_url_hint">http://10.8.0.1:8787</string>
+    <string name="bearer_label">Bearer token</string>
+    <string name="trust_self_signed">Trust self-signed certificate (LAN use only recommended)</string>
+    <string name="connection_mode_label">Connection mode</string>
+    <string name="mode_direct">Direct (LAN / existing VPN)</string>
+    <string name="mode_wireguard">In-app WireGuard VPN</string>
+    <string name="vpn_enable">Use VPN feature</string>
+    <string name="vpn_enable_note">Default is off. The tunnel starts only when on. The profile stays saved and editable while off.</string>
+    <string name="settings_saved">Settings saved</string>
+
+    <string name="vpn_profile_section">WireGuard profile</string>
+    <string name="vpn_no_profile">No profile. Import a file or enter it manually.</string>
+    <string name="vpn_import">Import config (.conf)</string>
+    <string name="vpn_manual">Enter manually</string>
+    <string name="vpn_delete">Delete profile</string>
+    <string name="vpn_delete_confirm">Delete this WireGuard profile? To keep it while the VPN stays off, choose Cancel.</string>
+    <string name="vpn_profile_saved">WireGuard profile saved</string>
+    <string name="vpn_profile_deleted">WireGuard profile deleted</string>
+    <string name="vpn_profile_invalid">Invalid config: %1$s</string>
+
+    <string name="vpn_connect">Connect</string>
+    <string name="vpn_disconnect">Disconnect</string>
+    <string name="vpn_reconnect">Reconnect</string>
+    <string name="vpn_grant_permission">Grant VPN permission</string>
+    <string name="vpn_test">Test server connection</string>
+    <string name="vpn_refresh">Refresh status</string>
+
+    <string name="vpn_status_label">Status</string>
+    <string name="vpn_state_disabled">Disabled</string>
+    <string name="vpn_state_config_missing">No profile</string>
+    <string name="vpn_state_permission_required">Permission needed</string>
+    <string name="vpn_state_connecting">Connecting</string>
+    <string name="vpn_state_connected">Connected</string>
+    <string name="vpn_state_degraded">Degraded</string>
+    <string name="vpn_state_disconnected">Disconnected</string>
+    <string name="vpn_state_error">Error</string>
+    <string name="vpn_profile_name_label">Profile</string>
+    <string name="vpn_endpoint_label">Endpoint</string>
+    <string name="vpn_handshake_label">Latest handshake</string>
+    <string name="vpn_handshake_never">Not yet</string>
+    <plurals name="vpn_handshake_ago">
+        <item quantity="one">%1$d sec ago</item>
+        <item quantity="other">%1$d secs ago</item>
+    </plurals>
+    <string name="vpn_traffic_label">Transfer</string>
+    <string name="vpn_traffic_value">TX %1$s / RX %2$s</string>
+    <string name="vpn_last_error_label">Last error</string>
+    <string name="vpn_retry_count_label">Retry count</string>
+    <string name="vpn_server_label">Server reachable</string>
+    <string name="vpn_auth_label">API authorized</string>
+    <string name="vpn_yes">Yes</string>
+    <string name="vpn_no">No</string>
+    <string name="vpn_unknown">Unknown</string>
+
+    <string name="vpn_warning_default_route">This profile contains 0.0.0.0/0 or ::/0. All traffic from Every routes (not the whole device) may go through the VPN.</string>
+    <string name="vpn_note_scope">This VPN applies only to Every routes traffic. Other apps and tethered devices are out of scope.</string>
+    <string name="vpn_note_other_vpn">Connecting may switch away from another VPN. Android allows basically one active VPN per user.</string>
+
+    <string name="vpn_diag_profile">Config file</string>
+    <string name="vpn_diag_permission">VPN permission</string>
+    <string name="vpn_diag_tunnel">Tunnel</string>
+    <string name="vpn_diag_handshake">Handshake</string>
+    <string name="vpn_diag_reach">Server reachable</string>
+    <string name="vpn_diag_auth">API authorized</string>
+    <string name="vpn_diag_pass">OK</string>
+    <string name="vpn_diag_fail">Failed</string>
+
+    <string name="vpn_log_title">VPN log</string>
+    <string name="vpn_log_empty">No log entries</string>
+    <string name="vpn_log_clear">Clear log</string>
+
+    <string name="vpn_manual_title">Enter WireGuard profile manually</string>
+    <string name="field_profile_name">Display name</string>
+    <string name="field_private_key">PrivateKey</string>
+    <string name="field_address">Address (e.g. 10.8.0.2/32)</string>
+    <string name="field_dns">DNS (optional)</string>
+    <string name="field_peer_public_key">Peer PublicKey</string>
+    <string name="field_preshared_key">PresharedKey (optional)</string>
+    <string name="field_endpoint">Endpoint (e.g. vpn.example.net:51820)</string>
+    <string name="field_allowed_ips">AllowedIPs (e.g. 10.8.0.0/24)</string>
+    <string name="field_keepalive">PersistentKeepalive sec (optional)</string>
+
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
 </resources>

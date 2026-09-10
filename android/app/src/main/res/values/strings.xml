@@ -3,4 +3,94 @@
     <string name="app_name">Every routes</string>
     <string name="today_title">今日ビュー</string>
     <string name="empty_today">今日の予定はありません</string>
+    <string name="tab_today">今日</string>
+    <string name="tab_settings">設定</string>
+
+    <string name="settings_title">設定</string>
+    <string name="server_section">サーバー接続</string>
+    <string name="server_url_label">ベース URL</string>
+    <string name="server_url_hint">http://10.8.0.1:8787</string>
+    <string name="bearer_label">Bearer トークン</string>
+    <string name="trust_self_signed">自己署名証明書を信頼する（LAN 内利用のみ推奨）</string>
+    <string name="connection_mode_label">接続方式</string>
+    <string name="mode_direct">直接接続（LAN / 既存 VPN）</string>
+    <string name="mode_wireguard">アプリ内 WireGuard VPN</string>
+    <string name="vpn_enable">VPN 機能を使う</string>
+    <string name="vpn_enable_note">既定はオフです。オンのときのみトンネルを開始します。設定はオフのまま保持・編集できます。</string>
+    <string name="settings_saved">設定を保存しました</string>
+
+    <string name="vpn_profile_section">WireGuard 設定</string>
+    <string name="vpn_no_profile">設定がありません。インポートまたは手動入力してください。</string>
+    <string name="vpn_import">設定をインポート（.conf）</string>
+    <string name="vpn_manual">手動入力</string>
+    <string name="vpn_delete">設定を削除</string>
+    <string name="vpn_delete_confirm">この WireGuard 設定を削除しますか？ VPN 機能がオフでも設定だけ残す場合は「キャンセル」してください。</string>
+    <string name="vpn_profile_saved">WireGuard 設定を保存しました</string>
+    <string name="vpn_profile_deleted">WireGuard 設定を削除しました</string>
+    <string name="vpn_profile_invalid">設定が無効です: %1$s</string>
+
+    <string name="vpn_connect">接続</string>
+    <string name="vpn_disconnect">切断</string>
+    <string name="vpn_reconnect">再接続</string>
+    <string name="vpn_grant_permission">VPN 許可を与える</string>
+    <string name="vpn_test">サーバー接続テスト</string>
+    <string name="vpn_refresh">状態を更新</string>
+
+    <string name="vpn_status_label">状態</string>
+    <string name="vpn_state_disabled">無効</string>
+    <string name="vpn_state_config_missing">設定なし</string>
+    <string name="vpn_state_permission_required">許可待ち</string>
+    <string name="vpn_state_connecting">接続中</string>
+    <string name="vpn_state_connected">接続中</string>
+    <string name="vpn_state_degraded">不安定</string>
+    <string name="vpn_state_disconnected">切断中</string>
+    <string name="vpn_state_error">エラー</string>
+    <string name="vpn_profile_name_label">プロファイル</string>
+    <string name="vpn_endpoint_label">Endpoint</string>
+    <string name="vpn_handshake_label">最新 handshake</string>
+    <string name="vpn_handshake_never">まだありません</string>
+    <plurals name="vpn_handshake_ago">
+        <item quantity="other">%1$d 秒前</item>
+    </plurals>
+    <string name="vpn_traffic_label">送受信</string>
+    <string name="vpn_traffic_value">送信 %1$s / 受信 %2$s</string>
+    <string name="vpn_last_error_label">最終エラー</string>
+    <string name="vpn_retry_count_label">再試行回数</string>
+    <string name="vpn_server_label">サーバー到達</string>
+    <string name="vpn_auth_label">API 認証</string>
+    <string name="vpn_yes">はい</string>
+    <string name="vpn_no">いいえ</string>
+    <string name="vpn_unknown">不明</string>
+
+    <string name="vpn_warning_default_route">この設定は 0.0.0.0/0 または ::/0 を含みます。端末全体ではなく Every routes の全通信が VPN 経由になる可能性があります。</string>
+    <string name="vpn_note_scope">この VPN は Every routes の通信だけに適用されます。他のアプリやテザリング先の通信は対象外です。</string>
+    <string name="vpn_note_other_vpn">他の VPN 使用中は接続が切り替わる可能性があります。Android では同一ユーザーで使える VPN は基本 1 つです。</string>
+
+    <string name="vpn_diag_profile">設定ファイル</string>
+    <string name="vpn_diag_permission">VPN 許可</string>
+    <string name="vpn_diag_tunnel">トンネル</string>
+    <string name="vpn_diag_handshake">handshake</string>
+    <string name="vpn_diag_reach">サーバー到達</string>
+    <string name="vpn_diag_auth">API 認証</string>
+    <string name="vpn_diag_pass">成功</string>
+    <string name="vpn_diag_fail">失敗</string>
+
+    <string name="vpn_log_title">VPN ログ</string>
+    <string name="vpn_log_empty">ログはありません</string>
+    <string name="vpn_log_clear">ログを消去</string>
+
+    <string name="vpn_manual_title">WireGuard 設定の手動入力</string>
+    <string name="field_profile_name">表示名</string>
+    <string name="field_private_key">PrivateKey</string>
+    <string name="field_address">Address（例: 10.8.0.2/32）</string>
+    <string name="field_dns">DNS（任意）</string>
+    <string name="field_peer_public_key">Peer PublicKey</string>
+    <string name="field_preshared_key">PresharedKey（任意）</string>
+    <string name="field_endpoint">Endpoint（例: vpn.example.net:51820）</string>
+    <string name="field_allowed_ips">AllowedIPs（例: 10.8.0.0/24）</string>
+    <string name="field_keepalive">PersistentKeepalive 秒（任意）</string>
+
+    <string name="action_save">保存</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_delete">削除</string>
 </resources>

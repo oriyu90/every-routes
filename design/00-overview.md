@@ -42,6 +42,7 @@
 ```
 
 - 端末とサーバーの接続前提は **家庭内 LAN、または VPN で同一ネットワークに入った状態**。インターネット常時公開は想定しない。
+- Android アプリは端末外の既存 VPN（`DIRECT`）に加え、アプリ自身が WireGuard トンネルを開始する **App-only VPN（`APP_ONLY_WIREGUARD`）** を選択できる（既定 OFF）。詳細は [`04-app-wireguard-vpn.md`](04-app-wireguard-vpn.md)。
 - サーバーはクラウドサービスというより「複数端末・複数アプリのための共有バッファ」。
 
 ## 4. 共通データモデル
