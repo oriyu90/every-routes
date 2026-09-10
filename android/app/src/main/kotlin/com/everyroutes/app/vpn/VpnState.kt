@@ -32,6 +32,7 @@ object VpnErrorCodes {
  * VPN 状態のスナップショット。endpointHost にはホスト名のみを入れ、
  * PrivateKey / PresharedKey / Bearer トークンは絶対に含めない。
  */
+@androidx.compose.runtime.Immutable
 data class VpnStatus(
     val state: VpnState,
     val profileName: String? = null,

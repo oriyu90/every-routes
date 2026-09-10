@@ -10,6 +10,7 @@ enum class ConnectionMode {
  * 接続設定。VPN 機能は [vpnEnabled] が既定 OFF であり、
  * OFF の間はモードが VPN でもトンネルを開始しない。
  */
+@androidx.compose.runtime.Immutable
 data class ConnectionSettings(
     val mode: ConnectionMode = ConnectionMode.DIRECT,
     val vpnEnabled: Boolean = false,

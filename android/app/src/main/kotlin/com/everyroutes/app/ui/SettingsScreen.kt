@@ -1,12 +1,14 @@
 package com.everyroutes.app.ui
 
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,55 +21,115 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.everyroutes.app.R
 import com.everyroutes.app.settings.ConnectionMode
 import com.everyroutes.app.settings.ConnectionSettings
 import com.everyroutes.app.vpn.VpnErrorCodes
-import com.everyroutes.app.vpn.VpnLog
 import com.everyroutes.app.vpn.VpnState
 import com.everyroutes.app.vpn.VpnStatus
 import com.everyroutes.app.vpn.WireGuardProfile
-
-/** 接続テストの1段。pass=null は未実施。 */
-data class DiagStep(val labelRes: Int, val pass: Boolean?)
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
- * サーバー接続・VPN 設定画面。秘密値（トークン・鍵）はマスク表示し、
- * ログにも素通ししない（[VpnLog] が記録時にマスクする）。
+ * 設定 Route（container）。launcher・effect 収集・ダイアログ表示を担い、
+ * 業務状態は [SettingsViewModel] に置く。
+ */
+@Composable
+fun SettingsRoute(
+    vm: SettingsViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val state by vm.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val resolver = LocalContext.current.contentResolver
+    var messageRes by remember { mutableStateOf<Int?>(null) }
+    var messageArg by remember { mutableStateOf<String?>(null) }
+    val showManualDialog = remember { mutableStateOf(false) }
+    val showDeleteConfirm = remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        vm.onEvent(SettingsEvent.PermissionResult(vm.permissionIntent() == null))
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            val text = runCatching { resolver.readConfigText(uri) }.getOrNull()
+            if (text == null) {
+                vm.onEvent(SettingsEvent.ImportFailed("read failed"))
+                return@launch
+            }
+            val name = runCatching { resolver.displayName(uri) }.getOrNull() ?: "wireguard"
+            vm.onEvent(SettingsEvent.ImportReceived(name, text))
+        }
+    }
+
+    LaunchedEffect(vm) {
+        vm.effects.collect { effect ->
+            when (effect) {
+                is SettingsEffect.ShowMessage -> {
+                    messageRes = effect.resId
+                    messageArg = effect.arg
+                }
+                SettingsEffect.OpenPermissionDialog -> {
+                    vm.permissionIntent()?.let { permissionLauncher.launch(it) }
+                }
+                SettingsEffect.OpenImportPicker -> {
+                    importLauncher.launch(arrayOf("*/*"))
+                }
+            }
+        }
+    }
+
+    val message = messageRes?.let { res ->
+        messageArg?.let { stringResource(res, it) } ?: stringResource(res)
+    }
+    SettingsScreen(
+        state = state,
+        message = message,
+        showManualDialog = showManualDialog,
+        showDeleteConfirm = showDeleteConfirm,
+        onEvent = vm::onEvent,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 設定画面（stateless）。表示とイベント配送のみ。
+ *
+ * 秘密値（トークン・鍵）はマスク表示し、ログにも素通ししない。
  */
 @Composable
 fun SettingsScreen(
-    settings: ConnectionSettings,
-    onSettingsChange: (ConnectionSettings) -> Unit,
-    profile: WireGuardProfile?,
-    status: VpnStatus,
-    logEntries: List<VpnLog.Entry>,
-    diag: List<DiagStep>,
+    state: SettingsUiState,
     message: String?,
     showManualDialog: MutableState<Boolean>,
     showDeleteConfirm: MutableState<Boolean>,
-    onImportClick: () -> Unit,
-    onManualSave: (ManualProfileInput) -> Unit,
-    onDeleteConfirm: () -> Unit,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onReconnect: () -> Unit,
-    onGrantPermission: () -> Unit,
-    onTest: () -> Unit,
-    onRefresh: () -> Unit,
-    onClearLog: () -> Unit,
-    onSaveSettings: () -> Unit,
+    onEvent: (SettingsEvent) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -77,222 +139,53 @@ fun SettingsScreen(
             item { Text(message, color = MaterialTheme.colorScheme.primary) }
         }
         item {
-            Text(stringResource(R.string.server_section), style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = settings.serverBaseUrl,
-                onValueChange = { onSettingsChange(settings.copy(serverBaseUrl = it)) },
-                label = { Text(stringResource(R.string.server_url_label)) },
-                placeholder = { Text(stringResource(R.string.server_url_hint)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+            ServerSection(
+                settings = state.settings,
+                onSettingsChange = { onEvent(SettingsEvent.SettingsChanged(it)) },
+                onSave = { onEvent(SettingsEvent.SaveSettings) },
             )
-            OutlinedTextField(
-                value = settings.bearerToken,
-                onValueChange = { onSettingsChange(settings.copy(bearerToken = it)) },
-                label = { Text(stringResource(R.string.bearer_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = settings.trustSelfSigned,
-                    onCheckedChange = { onSettingsChange(settings.copy(trustSelfSigned = it)) },
-                )
-                Text(
-                    stringResource(R.string.trust_self_signed),
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
         }
         item {
-            Text(stringResource(R.string.connection_mode_label), style = MaterialTheme.typography.titleMedium)
-            ModeRow(
-                selected = settings.mode == ConnectionMode.DIRECT,
-                labelRes = R.string.mode_direct,
-                onSelect = { onSettingsChange(settings.copy(mode = ConnectionMode.DIRECT)) },
+            ModeSection(
+                settings = state.settings,
+                onSettingsChange = { onEvent(SettingsEvent.SettingsChanged(it)) },
+                onSave = { onEvent(SettingsEvent.SaveSettings) },
             )
-            ModeRow(
-                selected = settings.mode == ConnectionMode.APP_ONLY_WIREGUARD,
-                labelRes = R.string.mode_wireguard,
-                onSelect = { onSettingsChange(settings.copy(mode = ConnectionMode.APP_ONLY_WIREGUARD)) },
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = settings.vpnEnabled,
-                    onCheckedChange = { onSettingsChange(settings.copy(vpnEnabled = it)) },
-                )
-                Text(
-                    stringResource(R.string.vpn_enable),
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-            Text(
-                stringResource(R.string.vpn_enable_note),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(Modifier.height(4.dp))
-            Button(onClick = onSaveSettings, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.action_save))
-            }
         }
         item {
-            Text(stringResource(R.string.vpn_profile_section), style = MaterialTheme.typography.titleMedium)
-            if (profile == null) {
-                Text(stringResource(R.string.vpn_no_profile))
-            } else {
-                ProfileRow(labelRes = R.string.vpn_profile_name_label, value = profile.displayName)
-                ProfileRow(
-                    labelRes = R.string.vpn_endpoint_label,
-                    value = profile.endpointHost ?: stringResource(R.string.vpn_unknown),
-                )
-            }
-            ProfileRow(labelRes = R.string.vpn_status_label, value = stateName(status.state))
-            if (status.tunnelUp) {
-                ProfileRow(
-                    labelRes = R.string.vpn_handshake_label,
-                    value = status.handshakeAgeSec?.let {
-                        val age = it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
-                        androidx.compose.ui.res.pluralStringResource(
-                            R.plurals.vpn_handshake_ago,
-                            age,
-                            it,
-                        )
-                    } ?: stringResource(R.string.vpn_handshake_never),
-                )
-                ProfileRow(
-                    labelRes = R.string.vpn_traffic_label,
-                    value = stringResource(
-                        R.string.vpn_traffic_value,
-                        formatBytes(status.txBytes),
-                        formatBytes(status.rxBytes),
-                    ),
-                )
-            }
-            if (status.lastError != VpnErrorCodes.NONE) {
-                ProfileRow(labelRes = R.string.vpn_last_error_label, value = status.lastError)
-            }
-            if (status.retryCount > 0) {
-                ProfileRow(
-                    labelRes = R.string.vpn_retry_count_label,
-                    value = status.retryCount.toString(),
-                )
-            }
-            ProfileRow(
-                labelRes = R.string.vpn_server_label,
-                value = triName(status.serverReachable),
-            )
-            ProfileRow(
-                labelRes = R.string.vpn_auth_label,
-                value = triName(status.apiAuthorized),
-            )
-            if (status.hasDefaultRoute) {
-                Text(
-                    stringResource(R.string.vpn_warning_default_route),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            Text(
-                stringResource(R.string.vpn_note_scope),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (status.otherVpnActive) {
-                Text(
-                    stringResource(R.string.vpn_note_other_vpn),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            VpnStatusSection(status = state.status, profile = state.profile)
         }
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onImportClick, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.vpn_import))
-                    }
-                    Button(
-                        onClick = { showManualDialog.value = true },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(stringResource(R.string.vpn_manual))
-                    }
-                }
-                if (profile != null) {
-                    if (status.state == VpnState.PERMISSION_REQUIRED) {
-                        Button(onClick = onGrantPermission, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.vpn_grant_permission))
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onConnect, modifier = Modifier.weight(1f)) {
-                            Text(
-                                if (status.state == VpnState.ERROR) {
-                                    stringResource(R.string.vpn_reconnect)
-                                } else {
-                                    stringResource(R.string.vpn_connect)
-                                },
-                            )
-                        }
-                        Button(onClick = onDisconnect, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.vpn_disconnect))
-                        }
-                    }
-                    Button(onClick = onReconnect, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.vpn_reconnect))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onTest, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.vpn_test))
-                        }
-                        Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.vpn_refresh))
-                        }
-                    }
-                    Button(
-                        onClick = { showDeleteConfirm.value = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.vpn_delete))
-                    }
-                }
-            }
+            VpnActionsSection(
+                hasProfile = state.profile != null,
+                state = state.status.state,
+                needsPermission = state.status.state == VpnState.PERMISSION_REQUIRED,
+                onImport = { onEvent(SettingsEvent.ImportPickerRequested) },
+                onManual = { showManualDialog.value = true },
+                onConnect = { onEvent(SettingsEvent.Connect) },
+                onDisconnect = { onEvent(SettingsEvent.Disconnect) },
+                onReconnect = { onEvent(SettingsEvent.Reconnect) },
+                onGrantPermission = { onEvent(SettingsEvent.GrantPermission) },
+                onTest = { onEvent(SettingsEvent.TestConnection) },
+                onRefresh = { onEvent(SettingsEvent.Refresh) },
+                onDelete = { showDeleteConfirm.value = true },
+            )
         }
-        if (diag.isNotEmpty()) {
-            item {
-                Text(stringResource(R.string.vpn_test), style = MaterialTheme.typography.titleMedium)
-                diag.forEach { step ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(step.labelRes), modifier = Modifier.weight(1f))
-                        Text(
-                            when (step.pass) {
-                                true -> stringResource(R.string.vpn_diag_pass)
-                                false -> stringResource(R.string.vpn_diag_fail)
-                                null -> stringResource(R.string.vpn_unknown)
-                            },
-                        )
-                    }
-                }
-            }
+        if (state.diag.isNotEmpty()) {
+            item { DiagSection(diag = state.diag) }
         }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.vpn_log_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onClearLog) {
-                    Text(stringResource(R.string.vpn_log_clear))
-                }
-            }
-            if (logEntries.isEmpty()) {
+            LogHeader(onClear = { onEvent(SettingsEvent.ClearLog) })
+            if (state.logEntries.isEmpty()) {
                 Text(stringResource(R.string.vpn_log_empty))
             }
         }
-        items(logEntries.takeLast(20)) { entry ->
-            Text(
-                "${entry.code}: ${entry.message}",
-                style = MaterialTheme.typography.bodySmall,
-            )
+        items(
+            items = state.logEntries.takeLast(LOG_VISIBLE_COUNT),
+            key = { "${it.atMs}-${it.code}-${it.message.hashCode()}" },
+            contentType = { "log" },
+        ) { entry ->
+            Text("${entry.code}: ${entry.message}", style = MaterialTheme.typography.bodySmall)
         }
     }
 
@@ -301,7 +194,7 @@ fun SettingsScreen(
             onDismiss = { showManualDialog.value = false },
             onSave = {
                 showManualDialog.value = false
-                onManualSave(it)
+                onEvent(SettingsEvent.ManualSave(it))
             },
         )
     }
@@ -313,7 +206,7 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         showDeleteConfirm.value = false
-                        onDeleteConfirm()
+                        onEvent(SettingsEvent.DeleteConfirmed)
                     },
                 ) { Text(stringResource(R.string.action_delete)) }
             },
@@ -326,17 +219,281 @@ fun SettingsScreen(
     }
 }
 
+private const val LOG_VISIBLE_COUNT = 20
+
 @Composable
-private fun ModeRow(selected: Boolean, labelRes: Int, onSelect: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun ServerSection(
+    settings: ConnectionSettings,
+    onSettingsChange: (ConnectionSettings) -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.server_section), style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = settings.serverBaseUrl,
+            onValueChange = { onSettingsChange(settings.copy(serverBaseUrl = it)) },
+            label = { Text(stringResource(R.string.server_url_label)) },
+            placeholder = { Text(stringResource(R.string.server_url_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = settings.bearerToken,
+            onValueChange = { onSettingsChange(settings.copy(bearerToken = it)) },
+            label = { Text(stringResource(R.string.bearer_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(
+                checked = settings.trustSelfSigned,
+                onCheckedChange = { onSettingsChange(settings.copy(trustSelfSigned = it)) },
+            )
+            Text(
+                stringResource(R.string.trust_self_signed),
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.action_save))
+        }
+    }
+}
+
+@Composable
+private fun ModeSection(
+    settings: ConnectionSettings,
+    onSettingsChange: (ConnectionSettings) -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.connection_mode_label), style = MaterialTheme.typography.titleMedium)
+        ModeRow(
+            selected = settings.mode == ConnectionMode.DIRECT,
+            labelRes = R.string.mode_direct,
+            onSelect = { onSettingsChange(settings.copy(mode = ConnectionMode.DIRECT)) },
+        )
+        ModeRow(
+            selected = settings.mode == ConnectionMode.APP_ONLY_WIREGUARD,
+            labelRes = R.string.mode_wireguard,
+            onSelect = { onSettingsChange(settings.copy(mode = ConnectionMode.APP_ONLY_WIREGUARD)) },
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(
+                checked = settings.vpnEnabled,
+                onCheckedChange = { onSettingsChange(settings.copy(vpnEnabled = it)) },
+            )
+            Text(
+                stringResource(R.string.vpn_enable),
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+        Text(
+            stringResource(R.string.vpn_enable_note),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.action_save))
+        }
+    }
+}
+
+@Composable
+private fun VpnStatusSection(
+    status: VpnStatus,
+    profile: WireGuardProfile?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.vpn_profile_section), style = MaterialTheme.typography.titleMedium)
+        if (profile == null) {
+            Text(stringResource(R.string.vpn_no_profile))
+        } else {
+            ProfileRow(labelRes = R.string.vpn_profile_name_label, value = profile.displayName)
+            ProfileRow(
+                labelRes = R.string.vpn_endpoint_label,
+                value = profile.endpointHost ?: stringResource(R.string.vpn_unknown),
+            )
+        }
+        ProfileRow(labelRes = R.string.vpn_status_label, value = stateName(status.state))
+        if (status.tunnelUp) {
+            ProfileRow(
+                labelRes = R.string.vpn_handshake_label,
+                value = status.handshakeAgeSec?.let {
+                    val age = it.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(0)
+                    pluralStringResource(R.plurals.vpn_handshake_ago, age, it)
+                } ?: stringResource(R.string.vpn_handshake_never),
+            )
+            ProfileRow(
+                labelRes = R.string.vpn_traffic_label,
+                value = stringResource(
+                    R.string.vpn_traffic_value,
+                    formatBytes(status.txBytes),
+                    formatBytes(status.rxBytes),
+                ),
+            )
+        }
+        if (status.lastError != VpnErrorCodes.NONE) {
+            ProfileRow(labelRes = R.string.vpn_last_error_label, value = status.lastError)
+        }
+        if (status.retryCount > 0) {
+            ProfileRow(
+                labelRes = R.string.vpn_retry_count_label,
+                value = status.retryCount.toString(),
+            )
+        }
+        ProfileRow(
+            labelRes = R.string.vpn_server_label,
+            value = triName(status.serverReachable),
+        )
+        ProfileRow(
+            labelRes = R.string.vpn_auth_label,
+            value = triName(status.apiAuthorized),
+        )
+        if (status.hasDefaultRoute) {
+            Text(
+                stringResource(R.string.vpn_warning_default_route),
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Text(
+            stringResource(R.string.vpn_note_scope),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (status.otherVpnActive) {
+            Text(
+                stringResource(R.string.vpn_note_other_vpn),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VpnActionsSection(
+    hasProfile: Boolean,
+    state: VpnState,
+    needsPermission: Boolean,
+    onImport: () -> Unit,
+    onManual: () -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onReconnect: () -> Unit,
+    onGrantPermission: () -> Unit,
+    onTest: () -> Unit,
+    onRefresh: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onImport, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.vpn_import))
+            }
+            Button(onClick = onManual, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.vpn_manual))
+            }
+        }
+        if (hasProfile) {
+            if (needsPermission) {
+                Button(onClick = onGrantPermission, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.vpn_grant_permission))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onConnect, modifier = Modifier.weight(1f)) {
+                    Text(
+                        if (state == VpnState.ERROR) {
+                            stringResource(R.string.vpn_reconnect)
+                        } else {
+                            stringResource(R.string.vpn_connect)
+                        },
+                    )
+                }
+                Button(onClick = onDisconnect, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.vpn_disconnect))
+                }
+            }
+            Button(onClick = onReconnect, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.vpn_reconnect))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onTest, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.vpn_test))
+                }
+                Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.vpn_refresh))
+                }
+            }
+            Button(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.vpn_delete))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagSection(
+    diag: List<DiagStep>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.vpn_test), style = MaterialTheme.typography.titleMedium)
+        diag.forEach { step ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(step.labelRes), modifier = Modifier.weight(1f))
+                Text(
+                    when (step.pass) {
+                        true -> stringResource(R.string.vpn_diag_pass)
+                        false -> stringResource(R.string.vpn_diag_fail)
+                        null -> stringResource(R.string.vpn_unknown)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogHeader(
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.vpn_log_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onClear) {
+            Text(stringResource(R.string.vpn_log_clear))
+        }
+    }
+}
+
+@Composable
+private fun ModeRow(
+    selected: Boolean,
+    labelRes: Int,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = selected, onClick = onSelect)
         Text(stringResource(labelRes))
     }
 }
 
 @Composable
-private fun ProfileRow(labelRes: Int, value: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+private fun ProfileRow(
+    labelRes: Int,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
         Text(stringResource(labelRes), modifier = Modifier.weight(1f))
         Text(value)
     }
@@ -402,17 +559,19 @@ data class ManualProfileInput(
 private fun ManualProfileDialog(
     onDismiss: () -> Unit,
     onSave: (ManualProfileInput) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val name = androidx.compose.runtime.remember { mutableStateOf("") }
-    val privateKey = androidx.compose.runtime.remember { mutableStateOf("") }
-    val address = androidx.compose.runtime.remember { mutableStateOf("") }
-    val dns = androidx.compose.runtime.remember { mutableStateOf("") }
-    val peerKey = androidx.compose.runtime.remember { mutableStateOf("") }
-    val psk = androidx.compose.runtime.remember { mutableStateOf("") }
-    val endpoint = androidx.compose.runtime.remember { mutableStateOf("") }
-    val allowedIps = androidx.compose.runtime.remember { mutableStateOf("") }
-    val keepalive = androidx.compose.runtime.remember { mutableStateOf("") }
+    val name = remember { mutableStateOf("") }
+    val privateKey = remember { mutableStateOf("") }
+    val address = remember { mutableStateOf("") }
+    val dns = remember { mutableStateOf("") }
+    val peerKey = remember { mutableStateOf("") }
+    val psk = remember { mutableStateOf("") }
+    val endpoint = remember { mutableStateOf("") }
+    val allowedIps = remember { mutableStateOf("") }
+    val keepalive = remember { mutableStateOf("") }
     AlertDialog(
+        modifier = modifier,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.vpn_manual_title)) },
         text = {
@@ -460,13 +619,38 @@ private fun ManualField(
     state: MutableState<String>,
     labelRes: Int,
     secret: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
         value = state.value,
         onValueChange = { state.value = it },
         label = { Text(stringResource(labelRes)) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         singleLine = true,
         visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
     )
 }
+
+private fun android.content.ContentResolver.readConfigText(uri: Uri): String {
+    openInputStream(uri)?.use { stream ->
+        val buf = ByteArray(MAX_CONFIG_BYTES + 1)
+        var total = 0
+        while (total <= MAX_CONFIG_BYTES) {
+            val n = stream.read(buf, total, buf.size - total)
+            if (n < 0) break
+            total += n
+        }
+        return buf.copyOf(minOf(total, MAX_CONFIG_BYTES)).toString(Charsets.UTF_8)
+    } ?: throw IllegalArgumentException("cannot open")
+}
+
+private fun android.content.ContentResolver.displayName(uri: Uri): String? {
+    query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) {
+            return c.getString(0)?.substringBeforeLast('.')
+        }
+    }
+    return null
+}
+
+private const val MAX_CONFIG_BYTES = 64 * 1024

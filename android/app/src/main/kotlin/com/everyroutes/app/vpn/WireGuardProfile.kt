@@ -7,6 +7,7 @@ package com.everyroutes.app.vpn
  * UI・ログには [displayName] と [endpointHost] のみを出し、
  * [sanitizedConfig] そのものを表示・記録してはならない。
  */
+@androidx.compose.runtime.Immutable
 data class WireGuardProfile(
     val displayName: String,
     val sanitizedConfig: String,

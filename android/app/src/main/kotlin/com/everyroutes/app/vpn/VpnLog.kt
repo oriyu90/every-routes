@@ -5,6 +5,7 @@ package com.everyroutes.app.vpn
  * 記録時に秘密情報（PrivateKey / PresharedKey / 44文字鍵 / Bearer らしき値）をマスクする。
  */
 class VpnLog(private val capacity: Int = DEFAULT_CAPACITY) {
+    @androidx.compose.runtime.Immutable
     data class Entry(val atMs: Long, val code: String, val message: String)
 
     private val entries = ArrayDeque<Entry>()
