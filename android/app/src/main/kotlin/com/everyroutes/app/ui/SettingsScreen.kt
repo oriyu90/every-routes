@@ -37,6 +37,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.everyroutes.app.R
 import com.everyroutes.app.settings.ConnectionMode
 import com.everyroutes.app.settings.ConnectionSettings
@@ -138,6 +140,7 @@ fun SettingsScreen(
         if (message != null) {
             item { Text(message, color = MaterialTheme.colorScheme.primary) }
         }
+        item { LanguageSection() }
         item {
             ServerSection(
                 settings = state.settings,
@@ -220,6 +223,31 @@ fun SettingsScreen(
 }
 
 private const val LOG_VISIBLE_COUNT = 20
+
+@Composable
+private fun LanguageSection(modifier: Modifier = Modifier) {
+    val selected = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.language_section), style = MaterialTheme.typography.titleMedium)
+        LanguageRow(selected.isBlank(), R.string.language_system) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+        }
+        LanguageRow(selected.startsWith("ja"), R.string.language_japanese) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ja"))
+        }
+        LanguageRow(selected.startsWith("en"), R.string.language_english) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
+        }
+    }
+}
+
+@Composable
+private fun LanguageRow(selected: Boolean, labelRes: Int, onSelect: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = onSelect)
+        TextButton(onClick = onSelect) { Text(stringResource(labelRes)) }
+    }
+}
 
 @Composable
 private fun ServerSection(

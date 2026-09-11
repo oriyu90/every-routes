@@ -3,7 +3,10 @@
 Today-view timeline app + shared-server sync (design `design/02-every-routes-android.md`).
 
 - `app` module: MainActivity (Compose), `model/` (RoutineProfile/Task mirroring `spec/schemas`),
-  `buildTodayView()` shared by app + future Glance widget.
+  `buildTodayView()` shared by app + future Glance widget. The Routines tab creates,
+  enables/disables, deletes, and persists local routines for the Today timeline.
+- Display language can be changed in Settings between system default, Japanese, and
+  English. The selection uses Android's per-app locale API and persists across restarts.
 - Sync rules: match by `routineAddress` (never by name); last-write-wins on
   `lastModified`; server-only addresses are import candidates, never auto-taken.
 

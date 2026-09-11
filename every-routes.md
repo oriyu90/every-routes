@@ -8,6 +8,7 @@ Every Routes は、1日の予定・生活ルーティンを「ルーティンプ
 - `android-v0.1.0` (2026-09-11): 今日ビュー、曜日・祝日条件、256bit ルーティンアドレス生成、日英 strings。upload キー署名済み APK を Release に添付。
 - `android-v0.2.0` (2026-09-11): App-only WireGuard VPN（既定OFF、DIRECT/VPN 切替、.conf インポート・手動入力・削除、3回再試行＋ログ、多段接続テスト）。設計 `design/04-app-wireguard-vpn.md`。server / spec 無変更。
 - `android-v1.0.0` (2026-09-11): 初の安定版。スキル準拠 UI リメイク（MVI ViewModel、stateless 画面、edge-to-edge＋NavigationBar、M3 テーマ、日英 82 項目対応）。機能変更なし。単体テスト 30 件・lint エラー 0・実機エミュレータ（API 36）起動／設定／手動入力／再生成の煙試験済み。server / spec 無変更。
+- `android-v1.0.1` (2026-09-11): 「ルーティン」タブと追加ボタン、名前・曜日・時間帯の入力、有効切替、削除、端末内保存、今日ビュー反映を追加。設定にシステム／日本語／Englishのアプリ別言語切替を追加。AppCompat の自動保存で Android 8〜16 に対応。API 36 エミュレータで作成・再起動後保持・今日反映・English→日本語を確認。server / spec 無変更。
 - 紹介サイト: https://studio-rizi.pages.dev/projects/every-routes/（ja/en/zh/pt）
 
 ## 保守・保守責任者
